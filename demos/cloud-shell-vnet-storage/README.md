@@ -6,6 +6,7 @@ products:
 - azure-resource-manager
 urlFragment: cloud-shell-vnet-storage
 languages:
+- bicep
 - json
 ---
 # Azure Cloud Shell - VNet storage
