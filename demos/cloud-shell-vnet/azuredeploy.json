@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.22.6.54827",
-      "templateHash": "1048285105677865241"
+      "version": "0.31.34.60546",
+      "templateHash": "16317899917554307568"
     }
   },
   "parameters": {
@@ -21,12 +21,6 @@
         "description": "Name of Azure Relay Namespace."
       }
     },
-    "nsgName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of Network Security Group."
-      }
-    },
     "azureContainerInstanceOID": {
       "type": "string",
       "metadata": {
@@ -37,7 +31,13 @@
       "type": "string",
       "defaultValue": "cloudshellsubnet",
       "metadata": {
-        "description": "Name of the subnet to use for cloud shell containers."
+        "description": "Name of the subnet to use for Cloud Shell containers."
+      }
+    },
+    "nsgName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Network Security Group for Container Subnet."
       }
     },
     "containerSubnetAddressPrefix": {
@@ -53,6 +53,13 @@
         "description": "Name of the subnet to use for private link of relay namespace."
       }
     },
+    "relayNsgName": {
+      "type": "string",
+      "defaultValue": "relaynsg",
+      "metadata": {
+        "description": "Name of Network Security Group for Relay Subnet."
+      }
+    },
     "relaySubnetAddressPrefix": {
       "type": "string",
       "metadata": {
@@ -64,6 +71,13 @@
       "defaultValue": "storagesubnet",
       "metadata": {
         "description": "Name of the subnet to use for storage account."
+      }
+    },
+    "storageNsgName": {
+      "type": "string",
+      "defaultValue": "storagensg",
+      "metadata": {
+        "description": "Name of Network Security Group for Storage Subnet."
       }
     },
     "storageSubnetAddressPrefix": {
@@ -232,11 +246,24 @@
       "properties": {
         "addressPrefix": "[parameters('relaySubnetAddressPrefix')]",
         "privateEndpointNetworkPolicies": "Disabled",
-        "privateLinkServiceNetworkPolicies": "Enabled"
+        "privateLinkServiceNetworkPolicies": "Enabled",
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('relayNsgName'))]"
+        }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('existingVNETName'), parameters('containerSubnetName'))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('existingVNETName'), parameters('containerSubnetName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('relayNsgName'))]"
       ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('relayNsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": []
+      }
     },
     {
       "type": "Microsoft.Network/privateEndpoints",
@@ -278,11 +305,24 @@
               "[parameters('location')]"
             ]
           }
-        ]
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('storageNsgName'))]"
+        }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('existingVNETName'), parameters('relaySubnetName'))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('existingVNETName'), parameters('relaySubnetName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('storageNsgName'))]"
       ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('storageNsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": []
+      }
     },
     {
       "type": "Microsoft.Network/privateDnsZones",

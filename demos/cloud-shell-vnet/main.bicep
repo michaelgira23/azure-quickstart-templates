@@ -4,14 +4,14 @@ param existingVNETName string
 @description('Name of Azure Relay Namespace.')
 param relayNamespaceName string
 
-@description('Name of Network Security Group.')
-param nsgName string
-
 @description('Object Id of Azure Container Instance Service Principal. We have to grant this permission to create hybrid connections in the Azure Relay you specify. To get it: Get-AzADServicePrincipal -DisplayNameBeginsWith \'Azure Container Instance\'')
 param azureContainerInstanceOID string
 
-@description('Name of the subnet to use for cloud shell containers.')
+@description('Name of the subnet to use for Cloud Shell containers.')
 param containerSubnetName string = 'cloudshellsubnet'
+
+@description('Name of Network Security Group for Container Subnet.')
+param nsgName string
 
 @description('Address space of the subnet to add for cloud shell. e.g. 10.0.1.0/26')
 param containerSubnetAddressPrefix string
@@ -19,11 +19,17 @@ param containerSubnetAddressPrefix string
 @description('Name of the subnet to use for private link of relay namespace.')
 param relaySubnetName string = 'relaysubnet'
 
+@description('Name of Network Security Group for Relay Subnet.')
+param relayNsgName string = 'relaynsg'
+
 @description('Address space of the subnet to add for relay. e.g. 10.0.2.0/26')
 param relaySubnetAddressPrefix string
 
 @description('Name of the subnet to use for storage account.')
 param storageSubnetName string = 'storagesubnet'
+
+@description('Name of Network Security Group for Storage Subnet.')
+param storageNsgName string = 'storagensg'
 
 @description('Address space of the subnet to add for storage. e.g. 10.0.3.0/26')
 param storageSubnetAddressPrefix string
@@ -79,17 +85,17 @@ resource containerSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-05-01' 
       }
     ]
     networkSecurityGroup: {
-      id: networkSecurityGroup.id
+      id: containerNsg.id
     }
   }
 }
 
-resource networkSecurityGroupDefaultRules 'Microsoft.Network/networkSecurityGroups/defaultSecurityRules@2023-05-01' existing = {
+resource containerNsgDefaultRules 'Microsoft.Network/networkSecurityGroups/defaultSecurityRules@2023-05-01' existing = {
   name: nsgName
-  parent: networkSecurityGroup
+  parent: containerNsg
 }
 
-resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+resource containerNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
   name: nsgName
   location: location
   properties: {
@@ -173,10 +179,21 @@ resource relaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-05-01' = {
     addressPrefix: relaySubnetAddressPrefix
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
+    networkSecurityGroup: {
+      id: relayNsg.id
+    }
   }
   dependsOn: [
     containerSubnet
   ]
+}
+
+resource relayNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: relayNsgName
+  location: location
+  properties: {
+    securityRules: []
+  }
 }
 
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
@@ -214,10 +231,21 @@ resource storageSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-05-01' = 
         ]
       }
     ]
+    networkSecurityGroup: {
+      id: storageNsg.id
+    }
   }
   dependsOn: [
     relaySubnet
   ]
+}
+
+resource storageNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: storageNsgName
+  location: location
+  properties: {
+    securityRules: []
+  }
 }
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
@@ -255,5 +283,5 @@ resource privateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetwor
 output vnetId string = vnetResourceId
 output containerSubnetId string = containerSubnet.id
 output storageSubnetId string = storageSubnet.id
-output networkSecurityGroupResourceId string = networkSecurityGroup.id
-output nsgDefaultRules string = networkSecurityGroupDefaultRules.id
+output networkSecurityGroupResourceId string = containerNsg.id
+output nsgDefaultRules string = containerNsgDefaultRules.id
