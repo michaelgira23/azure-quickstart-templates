@@ -23,7 +23,7 @@ param storageSubnetName string = 'storagesubnet'
 param storageSubnetAddressPrefix string
 param location string = resourceGroup().location
 
-resource vnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   name: vnetName
   location: location
   tags: {
