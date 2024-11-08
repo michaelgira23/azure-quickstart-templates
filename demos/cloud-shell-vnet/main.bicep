@@ -40,9 +40,17 @@ param tagName object = {
 param location string = resourceGroup().location
 
 var networkProfileName = 'aci-networkProfile-${location}'
-var contributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-var networkRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
-var privateDnsZoneName = ((toLower(environment().name) == 'azureusgovernment') ? 'privatelink.servicebus.usgovcloudapi.net' : 'privatelink.servicebus.windows.net')
+var contributorRoleDefinitionId = resourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b24988ac-6180-42a0-ab88-20f7382dd24c'
+)
+var networkRoleDefinitionId = resourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '4d97b98b-1d4f-4787-a291-c67834d212e7'
+)
+var privateDnsZoneName = ((toLower(environment().name) == 'azureusgovernment')
+  ? 'privatelink.servicebus.usgovcloudapi.net'
+  : 'privatelink.servicebus.windows.net')
 var vnetResourceId = resourceId('Microsoft.Network/virtualNetworks', existingVNETName)
 
 resource existingVNET 'Microsoft.Network/virtualNetworks@2023-05-01' existing = {
@@ -74,9 +82,6 @@ resource containerSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-05-01' 
       id: networkSecurityGroup.id
     }
   }
-  dependsOn: [
-    networkSecurityGroup
-  ]
 }
 
 resource networkSecurityGroupDefaultRules 'Microsoft.Network/networkSecurityGroups/defaultSecurityRules@2023-05-01' existing = {
