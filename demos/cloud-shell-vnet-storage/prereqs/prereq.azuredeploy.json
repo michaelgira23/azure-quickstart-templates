@@ -5,64 +5,88 @@
         "_generator": {
             "name": "bicep",
             "version": "0.31.34.60546",
-            "templateHash": "15610040017626389360"
+            "templateHash": "4775008777933992496"
         }
     },
     "parameters": {
         "vnetName": {
             "type": "string",
             "metadata": {
-                "description": "Name of the VNET to inject Cloud Shell into"
+                "description": "Name of the VNET to inject Cloud Shell into."
             }
         },
         "vnetAddressPrefix": {
             "type": "string",
             "metadata": {
-                "description": "Address space of the subnet to add"
+                "description": "Address space of the subnet to add."
             }
         },
         "defaultSubnetName": {
             "type": "string",
             "defaultValue": "default",
             "metadata": {
-                "description": "Name of the subnet to use for cloud shell containers"
+                "description": "Name of the default subnet."
+            }
+        },
+        "defaultNsgName": {
+            "type": "string",
+            "defaultValue": "defaultnsg",
+            "metadata": {
+                "description": "Name of Network Security Group for the Default Subnet."
             }
         },
         "defaultSubnetAddressPrefix": {
             "type": "string",
             "metadata": {
-                "description": "Address space of the subnet to add"
+                "description": "Address space of the default subnet."
             }
         },
         "containerSubnetName": {
             "type": "string",
             "defaultValue": "cloudshellsubnet",
             "metadata": {
-                "description": "Name of the subnet to use for cloud shell containers"
+                "description": "Name of the subnet to use for Cloud Shell containers."
+            }
+        },
+        "nsgName": {
+            "type": "string",
+            "defaultValue": "containernsg",
+            "metadata": {
+                "description": "Name of Network Security Group for Container Subnet."
             }
         },
         "containerSubnetAddressPrefix": {
             "type": "string",
             "metadata": {
-                "description": "Address space of the subnet to add"
+                "description": "Address space of the subnet to add for Cloud Shell."
             }
         },
         "storageSubnetName": {
             "type": "string",
             "defaultValue": "storagesubnet",
             "metadata": {
-                "description": "Name of the subnet to use for storage account"
+                "description": "Name of the subnet to use for storage account."
+            }
+        },
+        "storageNsgName": {
+            "type": "string",
+            "defaultValue": "storagensg",
+            "metadata": {
+                "description": "Name of Network Security Group for Storage Subnet."
             }
         },
         "storageSubnetAddressPrefix": {
             "type": "string",
             "metadata": {
-                "description": "Address space of the subnet to add for storage subnet"
+                "description": "Address space of the subnet to add for storage."
             }
         },
         "location": {
             "type": "string",
-            "defaultValue": "[resourceGroup().location]"
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources."
+            }
         }
     },
     "resources": [
@@ -84,7 +108,10 @@
                     {
                         "name": "[parameters('defaultSubnetName')]",
                         "properties": {
-                            "addressPrefix": "[parameters('defaultSubnetAddressPrefix')]"
+                            "addressPrefix": "[parameters('defaultSubnetAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('defaultNsgName'))]"
+                            }
                         }
                     },
                     {
@@ -106,7 +133,10 @@
                                         "serviceName": "Microsoft.ContainerInstance/containerGroups"
                                     }
                                 }
-                            ]
+                            ],
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+                            }
                         }
                     },
                     {
@@ -120,10 +150,61 @@
                                         "[parameters('location')]"
                                     ]
                                 }
-                            ]
+                            ],
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('storageNsgName'))]"
+                            }
                         }
                     }
                 ]
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('defaultNsgName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('storageNsgName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-05-01",
+            "name": "[parameters('defaultNsgName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-05-01",
+            "name": "[parameters('nsgName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]",
+                        "name": "DenyIntraSubnetTraffic",
+                        "properties": {
+                            "description": "Deny traffic between container groups in cloudshellsubnet",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "[parameters('containerSubnetAddressPrefix')]",
+                            "destinationAddressPrefix": "[parameters('containerSubnetAddressPrefix')]",
+                            "access": "Deny",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-05-01",
+            "name": "[parameters('storageNsgName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": []
             }
         }
     ],

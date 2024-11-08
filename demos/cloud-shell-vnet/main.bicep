@@ -13,7 +13,7 @@ param containerSubnetName string = 'cloudshellsubnet'
 @description('Name of Network Security Group for Container Subnet.')
 param nsgName string
 
-@description('Address space of the subnet to add for cloud shell. e.g. 10.0.1.0/26')
+@description('Address space of the subnet to add for Cloud Shell. e.g. 10.0.1.0/26')
 param containerSubnetAddressPrefix string
 
 @description('Name of the subnet to use for private link of relay namespace.')

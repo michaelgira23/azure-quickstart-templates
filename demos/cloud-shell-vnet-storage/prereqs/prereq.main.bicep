@@ -1,26 +1,37 @@
-@description('Name of the VNET to inject Cloud Shell into')
+@description('Name of the VNET to inject Cloud Shell into.')
 param vnetName string
 
-@description('Address space of the subnet to add')
+@description('Address space of the subnet to add.')
 param vnetAddressPrefix string
 
-@description('Name of the subnet to use for cloud shell containers')
+@description('Name of the default subnet.')
 param defaultSubnetName string = 'default'
 
-@description('Address space of the subnet to add')
+@description('Name of Network Security Group for the Default Subnet.')
+param defaultNsgName string = 'defaultnsg'
+
+@description('Address space of the default subnet.')
 param defaultSubnetAddressPrefix string
 
-@description('Name of the subnet to use for cloud shell containers')
+@description('Name of the subnet to use for Cloud Shell containers.')
 param containerSubnetName string = 'cloudshellsubnet'
 
-@description('Address space of the subnet to add')
+@description('Name of Network Security Group for Container Subnet.')
+param nsgName string = 'containernsg'
+
+@description('Address space of the subnet to add for Cloud Shell.')
 param containerSubnetAddressPrefix string
 
-@description('Name of the subnet to use for storage account')
+@description('Name of the subnet to use for storage account.')
 param storageSubnetName string = 'storagesubnet'
 
-@description('Address space of the subnet to add for storage subnet')
+@description('Name of Network Security Group for Storage Subnet.')
+param storageNsgName string = 'storagensg'
+
+@description('Address space of the subnet to add for storage.')
 param storageSubnetAddressPrefix string
+
+@description('Location for all resources.')
 param location string = resourceGroup().location
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
@@ -40,6 +51,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         name: defaultSubnetName
         properties: {
           addressPrefix: defaultSubnetAddressPrefix
+          networkSecurityGroup: {
+            id: defaultNsg.id
+          }
         }
       }
       {
@@ -62,6 +76,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
               }
             }
           ]
+          networkSecurityGroup: {
+            id: containerNsg.id
+          }
         }
       }
       {
@@ -76,9 +93,52 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
               ]
             }
           ]
+          networkSecurityGroup: {
+            id: storageNsg.id
+          }
         }
       }
     ]
+  }
+}
+
+resource defaultNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: defaultNsgName
+  location: location
+  properties: {
+    securityRules: []
+  }
+}
+
+resource containerNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: nsgName
+  location: location
+  properties: {
+    securityRules: [
+      {
+        id: resourceId('Microsoft.Network/networkSecurityGroups', nsgName)
+        name: 'DenyIntraSubnetTraffic'
+        properties: {
+          description: 'Deny traffic between container groups in cloudshellsubnet'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: containerSubnetAddressPrefix
+          destinationAddressPrefix: containerSubnetAddressPrefix
+          access: 'Deny'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+    ]
+  }
+}
+
+resource storageNsg 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
+  name: storageNsgName
+  location: location
+  properties: {
+    securityRules: []
   }
 }
 
